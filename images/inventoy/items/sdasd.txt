@@ -1,0 +1,46 @@
+                #region MarksmanRifleMkII
+                else if ((WeaponModel)player.CurrentWeapon == WeaponModel.MarksmanRifleMkII)
+                {
+                    WeaponObject weaponObject = ServerPlayerInventoryModel.GetInventory(player)?.Weapons.Find(x => x.WeaponHash == WeaponModel.MarksmanRifleMkII);
+                    if (weaponObject == null)
+                    {
+                        Utilities.Utilities.SendNotify(player, $"", $"Du hast keine Waffe dieser Art!", "red", 5000);
+                        return;
+                    }
+                    else
+                    {
+                        int itemCount = ServerPlayerInventoryModel.GetItemCount(ServerPlayerInventoryModel.GetInventory(player).Container[0], itemid);
+                        int time = itemCount * 500;
+                        int ammoToAdd = itemCount * 8;
+                        int oldAmmo = weaponObject.Ammo;
+                        int newAmmo = oldAmmo += ammoToAdd;
+                        if (newAmmo > 2000)
+                        {
+                            Utilities.Utilities.SendNotify(player, $"", $"Du hast bereits genug Munition in dieser Waffe!", "red", 5000);
+                            return;
+                        }
+
+                        player.SetData("UsingAmmo", true);
+                        Utilities.Utilities.PlayerPanelShowProgressBar(player, time, "Munition nachladen.");
+                        Utilities.Utilities.PlayAnimation(player, "missheistdockssetup1ig_3@base", "welding_base_dockworker", time, 1);
+
+                        await Task.Delay(time);
+
+                        if (player.HasData("UsingAmmo"))
+                        {
+                            bool throwed = ServerPlayerInventoryModel.RemoveItem(player, ServerPlayerInventoryModel.GetInventory(player), itemid, itemCount, 1);
+                            if (!throwed) return;
+
+                            weaponObject.Ammo += ammoToAdd;
+
+                            using gtaContext db = new gtaContext();
+                            db.PlayerInventorys.UpdateRange(DatabaseHandler.PlayerInventorys);
+                            await db.SaveChangesAsync();
+
+                            player.DeleteData("UsingAmmo");
+                            Utilities.Utilities.SetWeaponAmmo(player, (uint)WeaponModel.MarksmanRifleMkII, weaponObject.Ammo);
+                            Utilities.Utilities.SendNotify(player, $"", $"Du hast erfolgreich {itemCount} Magazine in dein Marksman Scharfschützengewehr MK2 geladen!", "green", 5000);
+                        }
+                    }
+                }
+                #endregion MarksmanRifleMkII
